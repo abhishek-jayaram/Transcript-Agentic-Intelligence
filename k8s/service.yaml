@@ -1,0 +1,15 @@
+# ClusterIP = reachable only inside the cluster. Open it on your laptop with:
+#   kubectl -n transcript-intelligence port-forward svc/ti-web 8000:80
+# The UI has no login: do NOT change this to LoadBalancer / NodePort or add a public Ingress unless you put authentication in front.
+apiVersion: v1
+kind: Service
+metadata:
+  name: ti-web
+  namespace: transcript-intelligence
+spec:
+  type: ClusterIP
+  selector: {app: ti-web}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

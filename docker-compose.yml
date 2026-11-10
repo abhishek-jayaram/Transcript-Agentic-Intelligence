@@ -1,0 +1,10 @@
+# Local Docker run:   docker compose up --build        then open http://127.0.0.1:8000
+# Settings come from your .env (NEO4J_*, FOUNDRY_*, and the AZURE_* service principal values - see DEPLOY.md).
+services:
+  web:
+    build: .
+    image: ti-web:local
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"     # 127.0.0.1 on purpose: the UI has no login, so never publish it to your network
+    restart: unless-stopped

@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Transcript Intelligence</title>
+<style>
+  :root {
+    --bg: #f5f6f8; --surface: #ffffff; --surface-2: #eef1f4; --border: #dfe3e8;
+    --text: #16202a; --muted: #5a6776; --accent: #0f766e; --accent-ink: #ffffff; --accent-soft: #d9f0ec;
+    --err-bg: #fdeceb; --err: #a4281f; --code: #eef1f4;
+    --shadow: 0 1px 2px rgba(16,24,40,.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0e1318; --surface: #151c23; --surface-2: #1c252e; --border: #28323d;
+      --text: #e8eef4; --muted: #94a3b3; --accent: #2dd4bf; --accent-ink: #06201c; --accent-soft: #123a36;
+      --err-bg: #3a1916; --err: #ff9a8f; --code: #1c252e; --shadow: none;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  button, textarea { font: inherit; color: inherit; }
+  .app { display: grid; grid-template-columns: 280px 1fr; height: 100vh; height: 100dvh; }
+
+  /* sidebar */
+  aside { background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 0; }
+  .brand { padding: 18px 18px 12px; }
+  .brand h1 { font-size: 16px; margin: 0; letter-spacing: .01em; }
+  .brand p { margin: 2px 0 0; color: var(--muted); font-size: 12.5px; }
+  .personas { padding: 6px 10px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .persona { text-align: left; border: 1px solid transparent; background: transparent; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+  .persona:hover { background: var(--surface-2); }
+  .persona[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+  .persona b { display: block; font-size: 14px; }
+  .persona span { display: block; color: var(--muted); font-size: 12.5px; line-height: 1.4; margin-top: 2px; }
+  .side-foot { padding: 12px 14px 16px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; }
+  .side-foot small { color: var(--muted); font-size: 12px; line-height: 1.4; }
+  .btn { border: 1px solid var(--border); background: var(--surface); border-radius: 8px; padding: 8px 12px; cursor: pointer; }
+  .btn:hover { background: var(--surface-2); }
+  .btn:focus-visible, .persona:focus-visible, .chip:focus-visible, textarea:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* main */
+  main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+  .head { padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .head h2 { margin: 0; font-size: 16px; }
+  .head p { margin: 2px 0 0; color: var(--muted); font-size: 13px; }
+  .scroll { flex: 1; overflow-y: auto; padding: 20px 24px; }
+  .col { max-width: 820px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+
+  .empty h3 { margin: 24px 0 4px; font-size: 18px; }
+  .empty p { margin: 0 0 14px; color: var(--muted); }
+  .chips { display: flex; flex-direction: column; gap: 8px; }
+  .chip { text-align: left; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; cursor: pointer; box-shadow: var(--shadow); }
+  .chip:hover { border-color: var(--accent); }
+
+  .msg.user { align-self: flex-end; max-width: 80%; background: var(--accent); color: var(--accent-ink); padding: 9px 14px; border-radius: 14px 14px 4px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .msg.bot { background: var(--surface); border: 1px solid var(--border); border-radius: 14px 14px 14px 4px; padding: 14px 18px; box-shadow: var(--shadow); overflow-wrap: anywhere; }
+  .msg.err { background: var(--err-bg); color: var(--err); border: 1px solid var(--err); border-radius: 10px; padding: 10px 14px; }
+  .bot p { margin: 0 0 10px; }
+  .bot p:last-child, .bot ul:last-child, .bot ol:last-child { margin-bottom: 0; }
+  .bot ul, .bot ol { margin: 0 0 10px; padding-left: 22px; }
+  .bot li { margin: 3px 0; }
+  .bot h4 { margin: 14px 0 6px; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .bot h4:first-child { margin-top: 0; }
+  .bot code { background: var(--code); padding: 1px 5px; border-radius: 4px; font-size: .9em; }
+  .bot .cite { color: var(--muted); font-size: .92em; }
+  .bot table { border-collapse: collapse; margin: 0 0 10px; font-size: 14px; display: block; overflow-x: auto; }
+  .bot th, .bot td { border: 1px solid var(--border); padding: 5px 9px; text-align: left; }
+  .bot th { background: var(--surface-2); }
+  .lens { display: inline-block; background: var(--accent-soft); color: var(--text); border: 1px solid var(--accent); border-radius: 999px; padding: 1px 10px; font-size: 12.5px; margin-bottom: 8px; }
+  .meta { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 12.5px; color: var(--muted); }
+  .meta summary { cursor: pointer; }
+  .meta ol { margin: 8px 0 0; padding-left: 20px; }
+  .meta li { margin: 2px 0; }
+  .meta .bad { color: var(--err); }
+  .working { color: var(--muted); display: flex; align-items: center; gap: 10px; }
+  .dots { display: inline-flex; gap: 4px; }
+  .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); animation: pulse 1.2s infinite ease-in-out; }
+  .dots i:nth-child(2) { animation-delay: .15s; } .dots i:nth-child(3) { animation-delay: .3s; }
+  @keyframes pulse { 0%, 80%, 100% { opacity: .25; transform: scale(.8); } 40% { opacity: 1; transform: scale(1); } }
+  @media (prefers-reduced-motion: reduce) { .dots i { animation: none; opacity: .7; } }
+
+  /* composer */
+  .composer { padding: 12px 24px 16px; background: var(--bg); }
+  .composer .col { gap: 6px; }
+  .box { display: flex; gap: 10px; align-items: flex-end; background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 8px 8px 8px 14px; box-shadow: var(--shadow); }
+  .box:focus-within { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft), 0 0 0 3px var(--accent); }
+  .box textarea:focus-visible { outline: 0; }
+  textarea { flex: 1; resize: none; border: 0; background: transparent; outline: 0; padding: 6px 0; max-height: 160px; }
+  .send { background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 9px 16px; cursor: pointer; font-weight: 600; }
+  .send:disabled { opacity: .5; cursor: not-allowed; }
+  .note { color: var(--muted); font-size: 12px; text-align: center; }
+
+  @media (max-width: 760px) {
+    .app { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    aside { border-right: 0; border-bottom: 1px solid var(--border); }
+    .brand { padding: 12px 16px 4px; }
+    .personas { flex-direction: row; overflow-x: auto; padding: 6px 12px 10px; flex: none; }
+    .persona { flex: 0 0 auto; width: 190px; }
+    .persona span { display: none; }
+    .side-foot { display: none; }
+    .head, .scroll, .composer { padding-left: 16px; padding-right: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <aside>
+    <div class="brand">
+      <h1>Transcript Intelligence</h1>
+      <p>Aegis Cloud Security call transcripts</p>
+    </div>
+    <div class="personas" id="personas" role="group" aria-label="Choose a persona"></div>
+    <div class="side-foot">
+      <button class="btn" id="newChat">New chat with this persona</button>
+      <small>Calls from 2026-02-03 to 2026-04-28. Transcripts are excerpts (about 29% of each call), so counts are lower bounds.</small>
+    </div>
+  </aside>
+  <main>
+    <div class="head"><h2 id="pTitle"></h2><p id="pBlurb"></p></div>
+    <div class="scroll" id="scroll"><div class="col" id="thread"></div></div>
+    <div class="composer">
+      <div class="col">
+        <form class="box" id="form">
+          <textarea id="input" rows="1" maxlength="2000" placeholder="Ask a question..." aria-label="Your question"></textarea>
+          <button class="send" id="send" type="submit">Ask</button>
+        </form>
+        <div class="note">Enter to send, Shift+Enter for a new line. Answers cite the call and date.</div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  let personas = [], current = "auto", busy = false;
+
+  // ---- per-browser-tab state (conversation survives reload; wrapped because storage can be unavailable) ----
+  let state = { sid: null, threads: {} };
+  try { state = JSON.parse(sessionStorage.getItem("ti-state")) || state; } catch (e) {}
+  if (!state.sid) state.sid = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(16).slice(2));
+  const save = () => { try { sessionStorage.setItem("ti-state", JSON.stringify(state)); } catch (e) {} };
+  const thread = () => (state.threads[current] = state.threads[current] || []);
+
+  // ---- tiny, safe markdown renderer (escapes HTML first) ----
+  const esc = s => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  function inline(s) {
+    return esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\w)/g, "$1<em>$2</em>")
+      .replace(/\(([^()]*?\d{4}-\d{2}-\d{2}[^()]*?)\)/g, '<span class="cite">($1)</span>');
+  }
+  function md(src) {
+    const lines = src.replace(/\r/g, "").split("\n");
+    let out = "", i = 0, list = null, para = [];
+    const flushPara = () => {
+      if (!para.length) return;
+      let t = para.join(" ").trim(); para = [];
+      const m = t.match(/^\[Lens:\s*([^\]]+)\]\s*/i);
+      let pre = "";
+      if (m) { pre = '<span class="lens">Lens: ' + esc(m[1]) + "</span>"; t = t.slice(m[0].length); }
+      if (/^(Evidence|Suggested next steps?):?$/i.test(t)) out += "<h4>" + esc(t.replace(/:$/, "")) + "</h4>";
+      else out += (t || pre) ? "<p>" + pre + (pre && t ? "<br>" : "") + inline(t) + "</p>" : "";
+    };
+    const closeList = () => { if (list) { out += "</" + list + ">"; list = null; } };
+    while (i < lines.length) {
+      const ln = lines[i];
+      let m;
+      if (/^\s*$/.test(ln)) { flushPara(); closeList(); i++; continue; }
+      if ((m = ln.match(/^#{1,4}\s+(.*)$/))) { flushPara(); closeList(); out += "<h4>" + inline(m[1]) + "</h4>"; i++; continue; }
+      if (/^\s*\|/.test(ln) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|?\s*$/.test(lines[i + 1])) {
+        flushPara(); closeList();
+        const cells = r => r.trim().replace(/^\||\|$/g, "").split("|").map(c => inline(c.trim()));
+        out += "<table><thead><tr>" + cells(ln).map(c => "<th>" + c + "</th>").join("") + "</tr></thead><tbody>";
+        i += 2;
+        while (i < lines.length && /^\s*\|/.test(lines[i])) { out += "<tr>" + cells(lines[i]).map(c => "<td>" + c + "</td>").join("") + "</tr>"; i++; }
+        out += "</tbody></table>"; continue;
+      }
+      if ((m = ln.match(/^\s*[-*]\s+(.*)$/))) { flushPara(); if (list !== "ul") { closeList(); out += "<ul>"; list = "ul"; } out += "<li>" + inline(m[1]) + "</li>"; i++; continue; }
+      if ((m = ln.match(/^\s*\d+[.)]\s+(.*)$/))) { flushPara(); if (list !== "ol") { closeList(); out += "<ol>"; list = "ol"; } out += "<li>" + inline(m[1]) + "</li>"; i++; continue; }
+      closeList(); para.push(ln.trim()); i++;
+    }
+    flushPara(); closeList();
+    return out;
+  }
+
+  // ---- rendering ----
+  function stepsHtml(steps, seconds) {
+    const n = steps.length;
+    const counts = {};
+    steps.forEach(s => { counts[s.tool] = (counts[s.tool] || 0) + 1; });
+    const sum = Object.entries(counts).map(([t, c]) => t + (c > 1 ? " x" + c : "")).join(", ") || "no tools used";
+    const items = steps.map(s => '<li class="' + (s.error ? "bad" : "") + '"><code>' + esc(s.tool) + "</code> " + esc(s.detail || "") + "</li>").join("");
+    return '<details class="meta"><summary>' + esc(seconds + "s - " + sum) + "</summary>" + (n ? "<ol>" + items + "</ol>" : "") + "</details>";
+  }
+  function render() {
+    const t = thread(), el = $("thread");
+    if (!t.length) {
+      const p = personas.find(x => x.id === current);
+      el.innerHTML = '<div class="empty"><h3>What do you want to know?</h3><p>Try one of these, or ask your own question.</p><div class="chips">' +
+        (p ? p.demos.map((d, i) => '<button class="chip" data-i="' + i + '">' + esc(d) + "</button>").join("") : "") + "</div></div>";
+      el.querySelectorAll(".chip").forEach(b => b.onclick = () => ask(p.demos[+b.dataset.i]));
+    } else {
+      el.innerHTML = t.map(m =>
+        m.role === "user" ? '<div class="msg user">' + esc(m.text) + "</div>" :
+        m.role === "err" ? '<div class="msg err" role="alert">' + esc(m.text) + "</div>" :
+        '<div class="msg bot">' + md(m.text) + stepsHtml(m.steps || [], m.seconds) + "</div>").join("");
+    }
+    $("scroll").scrollTop = $("scroll").scrollHeight;
+  }
+  function renderPersonas() {
+    $("personas").innerHTML = personas.map(p =>
+      '<button class="persona" data-id="' + p.id + '" aria-pressed="' + (p.id === current) + '"><b>' + esc(p.label) + "</b><span>" + esc(p.blurb) + "</span></button>").join("");
+    $("personas").querySelectorAll(".persona").forEach(b => b.onclick = () => select(b.dataset.id));
+    const p = personas.find(x => x.id === current);
+    if (p) { $("pTitle").textContent = p.label; $("pBlurb").textContent = p.blurb; }
+  }
+  function select(id) { current = id; try { sessionStorage.setItem("ti-persona", id); } catch (e) {} renderPersonas(); render(); $("input").focus(); }
+
+  // ---- asking ----
+  async function ask(text) {
+    text = (text || "").trim();
+    if (!text || busy) return;
+    busy = true; $("send").disabled = true;
+    const persona = current, t = thread();
+    t.push({ role: "user", text }); save(); render();
+    const w = document.createElement("div");
+    w.className = "msg bot working";
+    w.innerHTML = '<span class="dots"><i></i><i></i><i></i></span><span id="wtxt">Working... 0s</span>';
+    $("thread").appendChild(w); $("scroll").scrollTop = $("scroll").scrollHeight;
+    const t0 = Date.now(), timer = setInterval(() => { const x = $("wtxt"); if (x) x.textContent = "Working... " + Math.round((Date.now() - t0) / 1000) + "s"; }, 500);
+    try {
+      const r = await fetch("/api/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ persona, session_id: state.sid, message: text }) });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(typeof j.detail === "string" ? j.detail : "Request failed (" + r.status + ")");
+      state.threads[persona].push({ role: "bot", text: j.answer, steps: j.steps, seconds: j.seconds });
+    } catch (e) {
+      state.threads[persona].push({ role: "err", text: e instanceof TypeError ? "Could not reach the server. Is `python -m ti.web` still running?" : e.message });
+    } finally {
+      clearInterval(timer); busy = false; $("send").disabled = false; save();
+      if (persona === current) render();
+      $("input").focus();
+    }
+  }
+
+  $("form").onsubmit = e => { e.preventDefault(); const v = $("input").value; $("input").value = ""; grow(); ask(v); };
+  $("input").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); $("form").requestSubmit(); } });
+  const grow = () => { const t = $("input"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; };
+  $("input").addEventListener("input", grow);
+  $("newChat").onclick = async () => {
+    state.threads[current] = []; save(); render();
+    try { await fetch("/api/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ persona: current, session_id: state.sid }) }); } catch (e) {}
+  };
+
+  fetch("/api/personas").then(r => r.json()).then(p => {
+    personas = p;
+    try { const saved = sessionStorage.getItem("ti-persona"); if (saved && p.some(x => x.id === saved)) current = saved; } catch (e) {}
+    renderPersonas(); render(); $("input").focus();
+  }).catch(() => { $("thread").innerHTML = '<div class="msg err">Could not load personas. Is the server running?</div>'; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# Never bake secrets or local files into an image
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+.git/
+.gitignore
+.vscode/
+.pytest_cache/
+**/__pycache__/
+*.pyc
+
+# Not needed at runtime
+data/
+out/
+tests/
+k8s/
+*.md
+*.zip
+docker-compose.yml
+Dockerfile

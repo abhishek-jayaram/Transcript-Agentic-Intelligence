@@ -1,0 +1,9 @@
+neo4j>=5.20
+python-dotenv>=1.0
+azure-ai-projects>=1.0
+azure-identity>=1.17
+openai>=1.50
+agent-framework-foundry>=1.0
+fastapi>=0.110
+uvicorn>=0.29
+azure-monitor-opentelemetry>=1.8.10,<2

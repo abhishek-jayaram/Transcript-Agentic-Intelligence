@@ -1,0 +1,12 @@
+# secrets and local environments - never commit
+.env
+k8s/secrets.env
+.venv/
+venv/
+
+# generated
+out/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.zip

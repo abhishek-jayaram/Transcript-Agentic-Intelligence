@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ti-config
+data:
+  NEO4J_URI: "neo4j+s://8cf8fe7e.databases.neo4j.io"
+  NEO4J_USERNAME: "8cf8fe7e"
+  FOUNDRY_PROJECT_ENDPOINT: "https://neo4j-ai-project.services.ai.azure.com/api/projects/proj-default"
+  FOUNDRY_MODEL: "gpt-4.1-mini"
+  AZURE_AI_EMBEDDING_NAME: "text-embedding-3-small"
+  ENABLE_SENSITIVE_DATA: "false"
