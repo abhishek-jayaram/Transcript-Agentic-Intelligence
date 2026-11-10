@@ -173,6 +173,3 @@ tests/
 | No `Telemetry:` line at all | Old code: replace the whole `src\ti` folder |
 | Updating the project | Delete the old `src\ti` folder first so no stale files remain. `.env`, `data\` and `out\` are outside it and are not affected |
 
-## Security
-- Rotate the Neo4j Aura password if it has ever been shared; keep `.env` and `.venv` out of zips and git.
-- Call transcripts are customer content: keep `ENABLE_SENSITIVE_DATA=false`.
